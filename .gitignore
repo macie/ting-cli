@@ -1,0 +1,18 @@
+# Whitelist for sh
+
+# Ignore everything
+*
+
+# Allow CI/CD configs
+!/.gitignore
+!/Makefile
+
+# Allow source code...
+!ting-cli
+!*.sh
+
+!README.md
+!LICENSE
+
+# ...also in subdirectories
+!*/

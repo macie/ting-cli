@@ -1,0 +1,51 @@
+#!/bin/sh
+# ting - manage your TING pen.
+# Copyright 2024 Maciej Żok
+# SPDX-License-Identifier: MIT
+# <https://github.com/macie/ting-cli>
+set -eu
+
+# following line is used by `make release`
+TING_VERSION='24.03-prerelease'
+
+
+#
+#   MAIN ROUTINE
+#
+{
+	case $# in
+		0)
+			echo "ERROR: Invalid usage. See: '$0 help'" >&2
+			exit 64  # EX_USAGE
+			;;
+		1)
+			case $1 in
+				help|-h)
+					cat >&2 <<-EOF
+						ting - manage your TING pen.
+
+						Usage:
+						   ting <COMMAND>
+
+						Commands:
+						   help      Show this help and exit.
+						   version   Show version and exit.
+					EOF
+					;;
+				version)
+					echo "ting $TING_VERSION"
+					;;
+				*)
+					echo "ERROR: Unknown command '$1'. See valid commands with '$0 help'." >&2
+					exit 64  # EX_USAGE
+					;;
+			esac
+			;;
+		*)
+			echo "ERROR: Too many arguments. See usage: '$0 help'" >&2
+			exit 64  # EX_USAGE
+			;;
+	esac
+
+	exit 0  # EX_OK
+}

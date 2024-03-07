@@ -1,8 +1,0 @@
-#!/bin/sh
-# ting-cli
-# Copyright 2024 Maciej Żok
-# SPDX-License-Identifier: MIT
-# <github.com/macie/ting-cli>
-
-printf 'ERROR: not implemented' >&2
-exit 64  # EX_USAGE

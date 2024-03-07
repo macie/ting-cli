@@ -8,7 +8,7 @@
 !/Makefile
 
 # Allow source code...
-!ting-cli
+!ting
 !*.sh
 
 !README.md

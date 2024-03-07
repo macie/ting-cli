@@ -20,7 +20,7 @@ TING_VERSION='24.03-prerelease'
 ting_is_connected() {
 	if [ ! -d "${1:-}" ]; then
 		echo "ERROR: Device '$1' not found. Is TING pen connected?" >&2
-		return 65  # EX_NOINPUT
+		return 66  # EX_NOINPUT
 	fi
 }
 
@@ -67,6 +67,52 @@ ting_info() {
 		}'
 }
 
+# ting_list prints to stdout sorted list of books stored on the TING pen as
+# tab-separated columns: "<title>"	<authors>	<publisher>
+#
+# Usage: ting_list <path/to/ting>
+ting_list() {
+	for TING_BOOK_METADATA in $1/\$ting/?????_??.txt; do
+		awk -F ':' '
+			/^Name/{ sub(/^[ \t\r\n]+/, "", $2); title = $2 }
+			/^Author/{ sub(/^[ \t\r\n]+/, "", $2); authors = $2 }
+			/^Publisher/{ sub(/^[ \t\r\n]+/, "", $2); publisher = $2 }
+			END {
+				# titles are sometimes UPPERCASE
+				initial = substr(title, 1, 1)
+				rest = substr(title, 2)
+				gsub(/Ą/, "ą", rest)
+				gsub(/Ć/, "ć", rest)
+				gsub(/Ę/, "ę", rest)
+				gsub(/Ł/, "ł", rest)
+				gsub(/Ń/, "ń", rest)
+				gsub(/Ó/, "ó", rest)
+				gsub(/Ś/, "ś", rest)
+				gsub(/Ź/, "ź", rest)
+				gsub(/Ż/, "ż", rest)
+				printf "\"%s%s\"\t", toupper(initial), tolower(rest)
+
+				# do not print author if it is the same as publisher
+				if (authors != publisher) {
+					split(authors, a, ", ")
+				}
+				# print author(s) as: Surname, Name;
+				for (i = 1; i <= length(a); i++) {
+					split(a[i], words, " ")
+					surname = words[length(words)]
+					names = ""
+					for (j = 1; j < length(words); j++) {
+						names = names words[j]
+					}
+					printf "%s, %s%s", surname, names, (i < length(a)) ? "; " : ""
+				}
+				printf "\t"
+
+				printf "%s\n", publisher
+			}' "${TING_BOOK_METADATA}"
+	done | sort
+}
+
 
 #
 #   MAIN ROUTINE
@@ -95,6 +141,7 @@ ting_info() {
 						Commands:
 						   help      Show this help and exit.
 						   info      Show information about the TING pen.
+						   list      List books downloaded on the TING pen.
 						   version   Show version and exit.
 						
 						Options:
@@ -104,6 +151,10 @@ ting_info() {
 				info)
 					ting_is_connected "${TING_DEV:-}" || exit $?
 					ting_info "${TING_DEV:-}"
+					;;	
+				list)
+					ting_is_connected "${TING_DEV:-}" || exit $?
+					ting_list "${TING_DEV:-}"
 					;;
 				version)
 					echo "ting $TING_VERSION"

@@ -10,9 +10,74 @@ TING_VERSION='24.03-prerelease'
 
 
 #
+#   FUNCTIONS
+#
+
+# ting_is_connected checks if the TING pen is connected to the computer. If
+# pen is not connected, it prints error message to stderr and returns EX_NOINPUT.
+#
+# Usage: ting_is_connected <path/to/ting>
+ting_is_connected() {
+	if [ ! -d "${1:-}" ]; then
+		echo "ERROR: Device '$1' not found. Is TING pen connected?" >&2
+		return 65  # EX_NOINPUT
+	fi
+}
+
+# ting_normalized_settings prints to stdout the content of settings.ini without
+# any problematic non-ASCII characters. 
+#
+# Usage: ting_normalized_settings <path/to/ting>
+ting_normalized_settings() {
+	TING_SETTINGS_FILE="$1/\$ting/settings.ini"  # UTF-16 (LE): FF FE
+	# removing BOM characters (FF FE), null character and carriage return
+	sed "1s/^$(printf '\377\376')//" "${TING_SETTINGS_FILE}" | tr -d '\000\r'
+}
+
+# ting_info prints to stdout information about the TING pen.
+#
+# Usage: ting_info <path/to/ting>
+ting_info() {
+	ting_normalized_settings "$1" | awk -F '=' '
+		/^server/{ server = $2 }
+		/^area/{ area = $2 }
+		/^sw/{ sw = $2 }
+		/^language/{ lang = $2 }
+		/^serial/{ sn = $2 }
+		/^cdfs/{ sw_ver = $2 }
+		/^fw/{ fw_ver = $2 }
+		END {
+			country[33] = "fr"
+			country[34] = "es"
+			country[39] = "it"
+			country[44] = "uk"
+			country[48] = "pl"
+			country[49] = "de"
+			country[55] = "br"
+			country[86] = "cn"
+			country[90] = "tr"
+			# the other codes (20, 35, 99) are unknown to me
+			if (lang in country) { lang = country[lang] }
+
+			printf "Firmware version: %s\n", fw_ver
+			printf "Software version: %s (%s)\n", sw, sw_ver
+			printf "Serial number: %s\n", sn
+			printf "Locale: %s (%s)\n", area, lang
+			printf "Update server: %s\n", server
+		}'
+}
+
+
+#
 #   MAIN ROUTINE
 #
 {
+	if [ $# -ge 2 ] && [ $1 = '-d' ]; then
+		TING_DEV="$2"
+		shift 2
+	fi
+
+
 	case $# in
 		0)
 			echo "ERROR: Invalid usage. See: '$0 help'" >&2
@@ -25,12 +90,20 @@ TING_VERSION='24.03-prerelease'
 						ting - manage your TING pen.
 
 						Usage:
-						   ting <COMMAND>
+						   ting [-d DIR] <COMMAND>
 
 						Commands:
 						   help      Show this help and exit.
+						   info      Show information about the TING pen.
 						   version   Show version and exit.
+						
+						Options:
+						  -d DIR     Mounting point of the TING pen.
 					EOF
+					;;
+				info)
+					ting_is_connected "${TING_DEV:-}" || exit $?
+					ting_info "${TING_DEV:-}"
 					;;
 				version)
 					echo "ting $TING_VERSION"
